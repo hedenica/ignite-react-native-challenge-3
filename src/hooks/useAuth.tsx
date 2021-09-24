@@ -1,4 +1,4 @@
-import { makeRedirectUri, revokeAsync, startAsync } from 'expo-auth-session';
+import { AuthSessionResult, makeRedirectUri, revokeAsync, startAsync } from 'expo-auth-session';
 import React, { useEffect, createContext, useContext, useState, ReactNode } from 'react';
 import { generateRandom } from 'expo-auth-session/build/PKCE';
 
@@ -71,28 +71,35 @@ function AuthProvider({ children }: AuthProviderData) {
 
       // call startAsync with authUrl
 
-      const response = await startAsync({ authUrl })
+      const { type, params }: any = await startAsync({ authUrl }) 
 
       // verify if startAsync response.type equals "success" and response.params.error differs from "access_denied"
       // if true, do the following:
 
       // console.log('response do startAsync', response)
 
-      if (response.type === 'success' && response.params.error !== "access_denied") {
+      if (type === 'success' && params.error !== "access_denied") {
         // verify if startAsync response.params.state differs from STATE
-        if (response.params.state !== STATE) {
+        if (params.state !== STATE) {
           // if true, do the following:
           // throw an error with message "Invalid state value"
           throw new Error('Invalid state value')
         }
 
-        api.defaults.headers.authorization = `Bearer ${response.params.access_token}`
+        api.defaults.headers.authorization = `Bearer ${params.access_token}`
 
         const userResponse = await api.get('/users');
 
-        setUser(userResponse.data.data[0])
+        const { id, display_name, email, profile_image_url } = userResponse.data.data[0]
+
+        setUser({
+          id,
+          display_name,
+          email,
+          profile_image_url,
+        })
         // set userToken state with response's access_token from startAsync
-        setUserToken(response.params.access_token)
+        setUserToken(params.access_token)
       }
       
     } catch (error: any) {
@@ -123,7 +130,7 @@ function AuthProvider({ children }: AuthProviderData) {
     } finally {
       // set user state to an empty User object
       setUser({} as User)
-      
+
       // set userToken state to an empty string
       setUserToken('')
 
